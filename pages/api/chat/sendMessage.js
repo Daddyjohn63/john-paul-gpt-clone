@@ -1,3 +1,4 @@
+//api's associated with chats
 import { OpenAIEdgeStream } from "openai-edge-stream"; //calling openai
 
 export const config = {
@@ -15,7 +16,8 @@ export default async function handler(req) {
         "Your name is DaddyDude. An incredibly intelligent and quick-thinking AI. You always reply with an enthusiastic and positive energy. You were created by Web and Prosper. Your response must be formatted with markdown",
     };
     const stream = await OpenAIEdgeStream(
-      "https://api.openai.com/v1/chat/completions",
+      "https://api.openai.com/v1/chat/completions", //the url we want to hit.
+      //add configuration.
       {
         headers: {
           "content-type": "application/json",

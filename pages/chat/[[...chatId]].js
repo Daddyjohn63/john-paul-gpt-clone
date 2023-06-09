@@ -19,7 +19,7 @@ export default function ChatPage() {
       const newChatMessages = [
         ...prev, //take the previous array with the spread operator and add on another message with the properties shown.
         {
-          _id: uuid(),
+          _id: uuid(), //rendering an array in React requires an id
           role: "user",
           content: messageText,
         },
@@ -28,6 +28,7 @@ export default function ChatPage() {
     });
     setMessageText("");
     const response = await fetch(`/api/chat/sendMessage`, {
+      //hit the end point we defined in sendMessage.js
       //this is the endpoint we created in our API folder.
       method: "POST",
       headers: {
@@ -40,10 +41,11 @@ export default function ChatPage() {
     if (!data) {
       return;
     }
+    //read the data coming back from chatGPT
     const reader = data.getReader();
     await streamReader(reader, async (message) => {
       console.log("MESSAGE: ", message);
-      setIncomingMessage((s) => `${s}${message.content}`); //add the new content to the previous state.
+      setIncomingMessage((s) => `${s}${message.content}`); //add the new content to the previous state and return new state.
     });
     setGeneratingResponse(false);
   };
