@@ -27,6 +27,8 @@ export default function ChatPage() {
       return newChatMessages;
     });
     setMessageText("");
+
+    //console.log("NEW CHAT: ", json);
     const response = await fetch(`/api/chat/sendMessage`, {
       //hit the end point we defined in sendMessage.js
       //this is the endpoint we created in our API folder.
@@ -47,6 +49,7 @@ export default function ChatPage() {
       console.log("MESSAGE: ", message);
       setIncomingMessage((s) => `${s}${message.content}`); //add the new content to the previous state and return new state.
     });
+
     setGeneratingResponse(false);
   };
 
