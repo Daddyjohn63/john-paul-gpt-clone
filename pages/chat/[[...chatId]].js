@@ -43,10 +43,10 @@ export default function ChatPage() {
     if (!data) {
       return;
     }
-    //read the data coming back from chatGPT
+    //read the data coming back from chatGPT and pass it into state.
     const reader = data.getReader();
     await streamReader(reader, async (message) => {
-      console.log("MESSAGE: ", message);
+      // console.log("MESSAGE: ", message);
       setIncomingMessage((s) => `${s}${message.content}`); //add the new content to the previous state and return new state.
     });
 
@@ -61,10 +61,10 @@ export default function ChatPage() {
       <div className="grid h-screen grid-cols-[260px_1fr]">
         <ChatSidebar />
         <div className="flex flex-col overflow-hidden bg-gray-700">
-          <div className="flex-1 overflow-scroll text-white">
+          <div className="flex-1 overflow-auto text-white">
             {newChatMessages.map((message) => (
               <Message
-                key={message._id}
+                key={message._id} //need the id as we are rendering from an array.
                 role={message.role}
                 content={message.content}
               />

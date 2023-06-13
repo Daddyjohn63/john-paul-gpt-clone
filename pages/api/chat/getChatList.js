@@ -9,6 +9,7 @@ export default async function handler(req, res) {
     const chats = await db
       .collection("chats")
       .find(
+        //pass in search query.
         {
           userId: user.sub,
         },

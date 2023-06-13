@@ -17,7 +17,7 @@ export const ChatSidebar = () => {
       });
       const json = await response.json();
       console.log("CHAT LIST: ", json);
-      setChatList(json?.chats || []);
+      setChatList(json?.chats || []); //the endpoint returns an object called 'chats' , see this in getChatList.js endpoint.
     };
     loadChatList();
   }, []);
@@ -34,7 +34,7 @@ export const ChatSidebar = () => {
         {chatList.map((chat) => (
           <Link
             key={chat._id}
-            href={`/chat/${chat._id}`}
+            href={`/chat/${chat._id}`} //provides the link to the chat.
             className="side-menu-item"
           >
             <FontAwesomeIcon icon={faMessage} />
