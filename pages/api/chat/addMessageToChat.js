@@ -7,7 +7,7 @@ export default async function handler(req, res) {
     const { user } = await getSession(req, res);
     const client = await clientPromise;
     const db = client.db("JohnPaulChatGPT");
-    console.log("addmessagetochat :", req.body);
+    // console.log("addmessagetochat :", req.body);
     const { chatId, role, content } = req.body;
     const chat = await db.collection("chats").findOneAndUpdate(
       {

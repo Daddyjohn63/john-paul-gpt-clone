@@ -1,15 +1,25 @@
 import { ChatSidebar } from "components/ChatSidebar";
 import { Message } from "components/Message";
 import Head from "next/head";
+import { useRouter } from "next/router";
 import { streamReader } from "openai-edge-stream";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { v4 as uuid } from "uuid";
 
-export default function ChatPage() {
+export default function ChatPage({ chatId }) {
+  const [newChatId, setNewChatId] = useState(null);
   const [incomingMessage, setIncomingMessage] = useState(""); // stores the most recent incoming message from chat gpt
   const [messageText, setMessageText] = useState(""); //stores the current text that the user has typed into the chat input.
   const [newChatMessages, setNewChatMessages] = useState([]); //stores the list of chat messages that have been sent so far by the user? in an array.
   const [generatingResponse, setGeneratingResponse] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!generatingResponse && newChatId) {
+      setNewChatId(null);
+      router.push(`/chat/${newChatId}`);
+    }
+  }, [newChatId, generatingResponse, router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,6 +34,7 @@ export default function ChatPage() {
           content: messageText,
         },
       ];
+      //console.log("NEW CHAT MESSAGES: ", newChatMessages);
       return newChatMessages;
     });
     setMessageText("");
@@ -45,9 +56,14 @@ export default function ChatPage() {
     }
     //read the data coming back from chatGPT and pass it into state.
     const reader = data.getReader();
+    //below function comes from openai package.
     await streamReader(reader, async (message) => {
-      // console.log("MESSAGE: ", message);
-      setIncomingMessage((s) => `${s}${message.content}`); //add the new content to the previous state and return new state.
+      console.log("MESSAGE: ", message);
+      if (message.event === "newChatId") {
+        setNewChatId(message.content);
+      } else {
+        setIncomingMessage((s) => `${s}${message.content}`); //add the new content to the previous state and return new state.
+      }
     });
 
     setGeneratingResponse(false);
@@ -59,16 +75,17 @@ export default function ChatPage() {
         <title>New Chat</title>
       </Head>
       <div className="grid h-screen grid-cols-[260px_1fr]">
-        <ChatSidebar />
+        <ChatSidebar chatId={chatId} />
         <div className="flex flex-col overflow-hidden bg-gray-700">
           <div className="flex-1 overflow-auto text-white">
             {newChatMessages.map((message) => (
               <Message
-                key={message._id} //need the id as we are rendering from an array.
+                key={message._id} //need the id as we are rendering from an array.we dont need to pass this component.
                 role={message.role}
                 content={message.content}
               />
             ))}
+            {/* response back from openai */}
             {!!incomingMessage && (
               <Message role="assistant" content={incomingMessage} />
             )}
@@ -93,3 +110,12 @@ export default function ChatPage() {
     </>
   );
 }
+
+export const getServerSideProps = async (ctx) => {
+  const chatId = ctx.params?.chatId?.[0] || null; //the prop chatId needs to eb the same name we gave to the file [[...chatId]].js. Have to use null as we cannot pass undefined.
+  return {
+    props: {
+      chatId,
+    },
+  };
+};

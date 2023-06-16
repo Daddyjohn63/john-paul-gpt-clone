@@ -1,5 +1,4 @@
 import { getSession } from "@auth0/nextjs-auth0";
-
 import clientPromise from "lib/mongodb";
 
 export default async function handler(req, res) {
@@ -14,7 +13,7 @@ export default async function handler(req, res) {
     };
     //save to database
     const client = await clientPromise;
-    const db = client.db("JohnPaulChatGPT");
+    const db = client.db("JohnPaulChatGPT"); //db name
     const chat = await db.collection("chats").insertOne({
       userId: user.sub, //user.sub comes from auth0, so we can use it as a unique id.
       messages: [newUserMessage],

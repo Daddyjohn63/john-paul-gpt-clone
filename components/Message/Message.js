@@ -5,7 +5,8 @@ import Image from "next/image";
 import { ReactMarkdown } from "react-markdown/lib/react-markdown";
 
 export const Message = ({ role, content }) => {
-  const { user } = useUser();
+  const { user } = useUser(); //get the user from auth0
+  // console.log("HERE IS THE USER;", user);
   return (
     <div
       className={`grid grid-cols-[30px_1fr] gap-5 p-5 ${

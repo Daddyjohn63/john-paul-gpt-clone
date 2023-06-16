@@ -9,7 +9,7 @@ export default async function handler(req) {
   //the req object represents any data that we send to our API endpoint.In this case it is the message/ question from the user.
   try {
     //this is the message that the user types in the text box.
-    console.log("HERE IS THE REQ TO THE API ENPOINT", req.body);
+    //console.log("HERE IS THE REQ TO THE API ENPOINT", req.body);
     const { message } = await req.json();
     const initialChatMessage = {
       role: "system",
@@ -32,8 +32,8 @@ export default async function handler(req) {
       }
     );
     const json = await response.json();
-    console.log("JSON CNC:", json);
-    const chatId = json._id; //we access this after streaming.
+    //console.log("JSON CNC:", json);
+    const chatId = json._id;
 
     //send message to openai
     const stream = await OpenAIEdgeStream(
@@ -57,7 +57,7 @@ export default async function handler(req) {
       },
       {
         onBeforeStream: ({ emit }) => {
-          emit(chatId, "newChatId");
+          emit(chatId, "newChatId"); //this is a new event name we have created to be sent before the content stream, this way we can target the start of the stream.
         },
         //call endpoint to add the new chat to exisitng chats.
         onAfterStream: async ({ fullContent }) => {
