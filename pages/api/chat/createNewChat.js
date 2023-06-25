@@ -6,6 +6,14 @@ export default async function handler(req, res) {
     const { user } = await getSession(req, res); //get the user
     const { message } = req.body; //whatever the uses types, we want to pass this to our endpoint. we destructure it from req.body which extracts the value of the message property from the req.body object and assigns it to a variable called message.
 
+    //validate message data
+    if (!message || typeof message !== "string" || message.length > 200) {
+      res.status(422).json({
+        message: "message is required and must be less than 200 characters",
+      });
+      return;
+    }
+
     //create data to persist by creating a new object...
     const newUserMessage = {
       role: "user",

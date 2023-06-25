@@ -9,9 +9,42 @@ export default async function handler(req, res) {
     const db = client.db("JohnPaulChatGPT");
     // console.log("addmessagetochat :", req.body);
     const { chatId, role, content } = req.body;
+
+    let objectId;
+    //validate we have a mongo object id
+    try {
+      objectId = new ObjectId(chatId);
+    } catch (e) {
+      res.status(422).json({
+        message: "Invalid chat ID",
+      });
+      return;
+    }
+
+    //validate content data
+    if (
+      !content ||
+      typeof content !== "string" ||
+      (role === "user" && content.length > 200) ||
+      (role === "assistant" && content.length > 100000)
+    ) {
+      res.status(422).json({
+        message: "content is required and must be less than 200 characters",
+      });
+      return;
+    }
+
+    //validate role
+    if (role !== "user" && role !== "assistant") {
+      res.status(422).json({
+        message: "role must be either 'assistant' or 'user'",
+      });
+      return;
+    }
+
     const chat = await db.collection("chats").findOneAndUpdate(
       {
-        _id: new ObjectId(chatId), //find the object
+        _id: objectId, //find the object
         userId: user.sub, //make sure the user is the same.
       },
       {

@@ -1,4 +1,6 @@
 import { getSession } from "@auth0/nextjs-auth0";
+import { faRobot } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ChatSidebar } from "components/ChatSidebar";
 import { Message } from "components/Message";
 import clientPromise from "lib/mongodb";
@@ -10,14 +12,17 @@ import { useEffect, useState } from "react";
 import { v4 as uuid } from "uuid";
 
 export default function ChatPage({ chatId, title, messages = [] }) {
-  console.log("props: ", title, messages);
+  //console.log("props: ", title, messages);
   const [newChatId, setNewChatId] = useState(null);
   const [incomingMessage, setIncomingMessage] = useState(""); // stores the most recent incoming message from chat gpt
-  const [messageText, setMessageText] = useState(""); //stores the current text that the user has typed into the chat input.
+  const [messageText, setMessageText] = useState(""); //stores the current text that the user has typed into the chat input. This is what will get sent to the openai endpoint.
   const [newChatMessages, setNewChatMessages] = useState([]); //stores the list of chat messages that have been sent so far by the user? in an array.
   const [generatingResponse, setGeneratingResponse] = useState(false);
   const [fullMessage, setFullMessage] = useState("");
+  const [originalChatId, setOriginalChatId] = useState(chatId);
   const router = useRouter();
+
+  const routeHasChanged = chatId !== originalChatId;
 
   //when our route changes
   useEffect(() => {
@@ -27,7 +32,7 @@ export default function ChatPage({ chatId, title, messages = [] }) {
 
   //save the newly streamed message to new chat messages.
   useEffect(() => {
-    if (!generatingResponse && fullMessage) {
+    if (!routeHasChanged && !generatingResponse && fullMessage) {
       setNewChatMessages((prev) => [
         ...prev,
         {
@@ -38,7 +43,7 @@ export default function ChatPage({ chatId, title, messages = [] }) {
       ]);
       setFullMessage("");
     }
-  }, [generatingResponse, fullMessage]);
+  }, [generatingResponse, fullMessage, routeHasChanged]);
 
   //if we have created a new chat
   useEffect(() => {
@@ -51,6 +56,7 @@ export default function ChatPage({ chatId, title, messages = [] }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setGeneratingResponse(true);
+    setOriginalChatId(chatId);
     setNewChatMessages((prev) => {
       //prev represents the current state value.
       const newChatMessages = [
@@ -61,7 +67,8 @@ export default function ChatPage({ chatId, title, messages = [] }) {
           content: messageText,
         },
       ];
-      //console.log("NEW CHAT MESSAGES: ", newChatMessages);
+      console.log("NEW CHAT MESSAGES: ", newChatMessages);
+
       return newChatMessages;
     });
     setMessageText("");
@@ -81,12 +88,12 @@ export default function ChatPage({ chatId, title, messages = [] }) {
     if (!data) {
       return;
     }
-    //read the data coming back from chatGPT and pass it into state.
+    //read the data coming back from sendMessage endpoint/  chatGPT and pass it into state.
     const reader = data.getReader();
     let content = "";
     //below function comes from openai package.
     await streamReader(reader, async (message) => {
-      console.log("MESSAGE: ", message);
+      //console.log("MESSAGE: ", message);
       if (message.event === "newChatId") {
         setNewChatId(message.content);
       } else {
@@ -109,17 +116,40 @@ export default function ChatPage({ chatId, title, messages = [] }) {
       <div className="grid h-screen grid-cols-[260px_1fr]">
         <ChatSidebar chatId={chatId} />
         <div className="flex flex-col overflow-hidden bg-gray-700">
-          <div className="flex-1 overflow-auto text-white">
-            {allMessages.map((message) => (
-              <Message
-                key={message._id} //need the id as we are rendering from an array.we dont need to pass this component.
-                role={message.role}
-                content={message.content}
-              />
-            ))}
-            {/* response back from openai */}
-            {!!incomingMessage && (
-              <Message role="assistant" content={incomingMessage} />
+          <div className="flex flex-1 flex-col-reverse overflow-auto text-white">
+            {!allMessages.length && !incomingMessage && (
+              <div className="m-auto flex items-center justify-center text-center">
+                <div>
+                  <FontAwesomeIcon
+                    icon={faRobot}
+                    className="text-6xl text-emerald-200"
+                  />
+                  <h1 className="mt-2 text-4xl font-bold text-white/50">
+                    Ask me a question!
+                  </h1>
+                </div>
+              </div>
+            )}
+            {!!allMessages.length && (
+              <div className="mb-auto">
+                {allMessages.map((message) => (
+                  <Message
+                    key={message._id} //need the id as we are rendering from an array.we dont need to pass this component.
+                    role={message.role}
+                    content={message.content}
+                  />
+                ))}
+                {/* response back from openai */}
+                {!!incomingMessage && !routeHasChanged && (
+                  <Message role="assistant" content={incomingMessage} />
+                )}
+                {!!incomingMessage && !!routeHasChanged && (
+                  <Message
+                    role="notice"
+                    content="Only one message at a time. Please allow any other responses to complete before sending another message"
+                  />
+                )}
+              </div>
             )}
           </div>
           <footer className="bg-gray-800 p-10">
@@ -146,13 +176,33 @@ export default function ChatPage({ chatId, title, messages = [] }) {
 export const getServerSideProps = async (ctx) => {
   const chatId = ctx.params?.chatId?.[0] || null; //the prop chatId needs to be the same name we gave to the file [[...chatId]].js. Have to use null as we cannot pass undefined.
   if (chatId) {
+    let objectId;
+    //validate we have a mongo object id
+    try {
+      objectId = new ObjectId(chatId);
+    } catch (e) {
+      return {
+        redirect: {
+          destination: "/chat",
+        },
+      };
+    }
+
     const { user } = await getSession(ctx.req, ctx.res);
     const client = await clientPromise;
     const db = client.db("JohnPaulChatGPT");
     const chat = await db.collection("chats").findOne({
       userId: user.sub,
-      _id: new ObjectId(chatId),
+      _id: objectId,
     });
+
+    if (!chat) {
+      return {
+        redirect: {
+          destination: "/chat",
+        },
+      };
+    }
     return {
       props: {
         chatId,

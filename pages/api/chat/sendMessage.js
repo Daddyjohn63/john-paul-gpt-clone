@@ -11,15 +11,28 @@ export default async function handler(req) {
     //this is the message that the user types in the text box.
     //console.log("HERE IS THE REQ TO THE API ENPOINT", req.body);
     const { chatId: chatIdFromParam, message } = await req.json();
+    //validate message data
+    if (!message || typeof message !== "string" || message.length > 200) {
+      return new Response(
+        {
+          message: "message is required and must be less than 200 characters",
+        },
+        {
+          status: 422,
+        }
+      );
+    }
+
     let chatId = chatIdFromParam;
 
     const initialChatMessage = {
       role: "system",
       content:
-        "Your name is DaddyDude. An incredibly intelligent and quick-thinking AI. You always reply with an enthusiastic and positive energy. You were created by Web and Prosper.Your response must be formatted with markdown",
+        "Your name is Chatty Charlie. An incredibly intelligent and quick-thinking AI. You always reply with an enthusiastic and positive energy. You were created by John Paul.Your response must be formatted with markdown",
     };
 
     let newChatId;
+    let chatMessages = [];
 
     if (chatId) {
       //add message to existing chat
@@ -38,6 +51,8 @@ export default async function handler(req) {
           }),
         }
       );
+      const json = await response.json();
+      chatMessages = json.chat.messages || [];
     } else {
       //create new chat
       const response = await fetch(
@@ -58,7 +73,22 @@ export default async function handler(req) {
       //console.log("JSON CNC:", json);
       chatId = json._id;
       newChatId = json._id;
+      chatMessages = json.messages || [];
     }
+
+    const messagesToInclude = [];
+    chatMessages.reverse();
+    let usedTokens = 0;
+    for (let chatMessage of chatMessages) {
+      const messageTokens = chatMessage.content.length / 4;
+      usedTokens = usedTokens + messageTokens;
+      if (usedTokens <= 2000) {
+        messagesToInclude.push(chatMessage);
+      } else {
+        break;
+      }
+    }
+    messagesToInclude.reverse();
     //send message to openai
     const stream = await OpenAIEdgeStream(
       "https://api.openai.com/v1/chat/completions", //the url we want to hit.
@@ -75,7 +105,7 @@ export default async function handler(req) {
           model: "gpt-3.5-turbo",
           //message must be the message we pass to the sendmessage endpoint.
           //the role is 'user' as it is the user message we are sending.
-          messages: [initialChatMessage, { content: message, role: "user" }],
+          messages: [initialChatMessage, ...messagesToInclude],
           stream: true,
         }),
       },
@@ -108,6 +138,9 @@ export default async function handler(req) {
     );
     return new Response(stream); //returns the response from openai
   } catch (e) {
-    console.log("AN ERROR OCURRED IN SENDMESSAGE:", e);
+    return new Response(
+      { message: "An error occured in sendMessage" },
+      { status: 500 }
+    );
   }
 }
